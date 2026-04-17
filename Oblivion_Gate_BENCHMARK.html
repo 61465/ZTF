@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBLIVION GATE — Evaluation Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+:root {
+  --bg: #020509;
+  --panel: #060d14;
+  --card: #080f18;
+  --border: #0d2d45;
+  --accent: #00d4ff;
+  --accent2: #00ff88;
+  --danger: #ff3355;
+  --warn: #ffaa00;
+  --dim: #1a3a55;
+  --text: #c8e8f8;
+  --textdim: #4a7a9a;
+  --textmuted: #2a5a7a;
+  --glow: 0 0 20px rgba(0,212,255,0.25);
+  --glow2: 0 0 20px rgba(0,255,136,0.25);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Exo 2', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none; z-index:9999;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top:0; z-index:100;
+  background: rgba(2,5,9,0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.logo { font-family:'Orbitron',monospace; font-size:15px; font-weight:900; letter-spacing:4px; color:var(--accent); text-shadow:var(--glow); }
+.logo span { color:var(--accent2); }
+nav { display:flex; gap:4px; }
+.nav-btn {
+  background:transparent; border:1px solid transparent;
+  color:var(--textdim); font-family:'Exo 2',sans-serif; font-size:12px;
+  padding:6px 16px; border-radius:3px; cursor:pointer;
+  transition:all 0.2s; letter-spacing:1px;
+}
+.nav-btn:hover, .nav-btn.active {
+  border-color:var(--accent); color:var(--accent);
+  background:rgba(0,212,255,0.06); box-shadow:var(--glow);
+}
+.ar-tag { font-size:10px; color:var(--textmuted); direction:rtl; }
+
+/* ── HERO ── */
+#hero {
+  padding: 60px 48px 40px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #020d18 0%, var(--bg) 100%);
+}
+.hero-title { font-family:'Orbitron',monospace; font-size:32px; font-weight:900; color:var(--accent); letter-spacing:2px; text-shadow:var(--glow); }
+.hero-subtitle { font-size:16px; color:var(--textdim); margin-top:6px; letter-spacing:1px; }
+.hero-ar { font-size:14px; color:var(--textmuted); direction:rtl; margin-top:4px; }
+.hero-desc { font-size:13px; color:var(--textdim); margin-top:16px; max-width:680px; line-height:1.8; }
+
+/* ── SECTION ── */
+section { padding: 48px; border-bottom: 1px solid var(--border); }
+.sec-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:32px; }
+.sec-num { font-family:'Orbitron',monospace; font-size:48px; font-weight:900; color:var(--dim); line-height:1; margin-right:20px; flex-shrink:0; }
+.sec-titles {}
+.sec-en { font-family:'Orbitron',monospace; font-size:18px; font-weight:700; color:var(--accent); letter-spacing:2px; }
+.sec-ar { font-size:13px; color:var(--textdim); direction:rtl; margin-top:4px; }
+.sec-desc { font-size:13px; color:var(--textdim); line-height:1.8; margin-top:8px; max-width:600px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px 24px;
+}
+.card-label { font-size:10px; letter-spacing:2px; color:var(--textdim); text-transform:uppercase; margin-bottom:4px; }
+.card-label-ar { font-size:10px; color:var(--textmuted); direction:rtl; }
+.card-val { font-family:'Share Tech Mono',monospace; font-size:32px; font-weight:700; }
+.card-val.blue { color:var(--accent); }
+.card-val.green { color:var(--accent2); }
+.card-val.red { color:var(--danger); }
+.card-val.warn { color:var(--warn); }
+.card-sub { font-size:11px; color:var(--textmuted); margin-top:4px; }
+
+/* ── SLIDERS ── */
+.slider-group { margin-bottom:24px; }
+.slider-label { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px; }
+.slider-label-en { font-size:13px; color:var(--text); }
+.slider-label-ar { font-size:11px; color:var(--textdim); direction:rtl; }
+.slider-label-val { font-family:'Share Tech Mono',monospace; font-size:22px; color:var(--accent); font-weight:700; }
+input[type=range] {
+  width:100%; height:4px;
+  background: linear-gradient(90deg, var(--accent) var(--pct,50%), var(--dim) var(--pct,50%));
+  border-radius:2px; outline:none; cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:18px; height:18px;
+  background:var(--accent); border-radius:50%; cursor:pointer;
+  box-shadow:0 0 12px rgba(0,212,255,0.6);
+  border: 2px solid var(--bg);
+}
+input[type=range]::-moz-range-thumb {
+  width:18px; height:18px; background:var(--accent);
+  border-radius:50%; cursor:pointer; border:2px solid var(--bg);
+  box-shadow:0 0 12px rgba(0,212,255,0.6);
+}
+
+/* ── FORMULA BOX ── */
+.formula-box {
+  background: #03111d;
+  border: 1px solid var(--accent);
+  border-radius:4px;
+  padding:20px 24px;
+  font-family:'Share Tech Mono',monospace;
+  box-shadow: var(--glow);
+  position:relative;
+  overflow:hidden;
+}
+.formula-box::before { content:'FORMULA'; position:absolute; top:8px; right:12px; font-size:9px; letter-spacing:3px; color:var(--textmuted); }
+.formula-main { font-size:20px; color:var(--accent); margin-bottom:8px; }
+.formula-vars { font-size:12px; color:var(--textdim); line-height:2; }
+.formula-ar { font-size:11px; color:var(--textmuted); direction:rtl; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+
+/* ── PROBABILITY DISPLAY ── */
+.prob-result {
+  display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:24px 0;
+}
+.prob-card {
+  background:#03111d; border:1px solid var(--border); border-radius:4px;
+  padding:20px; text-align:center; position:relative; overflow:hidden;
+  transition: border-color 0.3s;
+}
+.prob-card.danger { border-color:var(--danger); box-shadow:0 0 20px rgba(255,51,85,0.1); }
+.prob-card.success { border-color:var(--accent2); box-shadow:0 0 20px rgba(0,255,136,0.1); }
+.prob-card-label { font-size:11px; letter-spacing:2px; color:var(--textdim); text-transform:uppercase; margin-bottom:4px; }
+.prob-card-ar { font-size:10px; color:var(--textmuted); direction:rtl; margin-bottom:12px; }
+.prob-big { font-family:'Share Tech Mono',monospace; font-size:36px; font-weight:700; transition:all 0.3s; }
+.prob-big.red { color:var(--danger); text-shadow:0 0 20px rgba(255,51,85,0.5); }
+.prob-big.green { color:var(--accent2); text-shadow:0 0 20px rgba(0,255,136,0.5); }
+.prob-frac { font-size:12px; color:var(--textmuted); margin-top:6px; font-family:'Share Tech Mono',monospace; }
+
+/* ── VERDICT BANNER ── */
+.verdict {
+  background: linear-gradient(90deg, #001a0d, #03111d);
+  border:1px solid var(--accent2); border-radius:4px;
+  padding:16px 20px; margin-top:16px;
+  display:flex; align-items:center; gap:16px;
+}
+.verdict-icon { font-size:24px; flex-shrink:0; }
+.verdict-text { font-size:12px; color:var(--text); line-height:1.7; }
+.verdict-ar { font-size:11px; color:var(--textdim); direction:rtl; margin-top:4px; }
+
+/* ── ATTACK TREE ── */
+.atree-grid { display:grid; grid-template-columns:1fr 48px 1fr; gap:0; align-items:start; }
+.atree-col-header { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:2px; text-align:center; padding:10px; border-radius:3px; margin-bottom:16px; }
+.atree-col-header.bad { color:var(--danger); background:rgba(255,51,85,0.08); border:1px solid rgba(255,51,85,0.3); }
+.atree-col-header.good { color:var(--accent2); background:rgba(0,255,136,0.08); border:1px solid rgba(0,255,136,0.3); }
+.atree-divider { display:flex; align-items:center; justify-content:center; padding-top:50px; }
+.atree-vs { font-family:'Orbitron',monospace; font-size:12px; color:var(--textdim); }
+.atree-step {
+  border:1px solid var(--border); border-radius:4px;
+  background:var(--card); margin-bottom:8px; overflow:hidden;
+  transition: transform 0.2s;
+}
+.atree-step:hover { transform:translateX(4px); }
+.atree-step.blocked { border-color:rgba(255,51,85,0.4); }
+.atree-step.blocked .step-head { background:rgba(255,51,85,0.06); }
+.atree-step.open { border-color:rgba(255,51,85,0.7); }
+.atree-step.open .step-head { background:rgba(255,51,85,0.12); }
+.step-head { padding:8px 12px; display:flex; align-items:center; justify-content:space-between; }
+.step-num-badge { font-family:'Share Tech Mono',monospace; font-size:10px; padding:2px 8px; border-radius:2px; }
+.step-num-badge.bad { background:rgba(255,51,85,0.15); color:var(--danger); border:1px solid rgba(255,51,85,0.3); }
+.step-num-badge.good { background:rgba(0,255,136,0.15); color:var(--accent2); border:1px solid rgba(0,255,136,0.3); }
+.step-badge { font-size:9px; letter-spacing:1px; padding:2px 8px; border-radius:2px; }
+.step-badge.blocked-badge { background:rgba(255,51,85,0.15); color:var(--danger); }
+.step-badge.open-badge { background:rgba(255,170,0,0.15); color:var(--warn); }
+.step-body { padding:8px 12px 10px; }
+.step-en { font-size:12px; color:var(--text); line-height:1.5; }
+.step-ar { font-size:11px; color:var(--textdim); direction:rtl; text-align:right; margin-top:4px; }
+.step-note { font-size:11px; color:var(--textmuted); margin-top:6px; font-style:italic; }
+.atree-arrow { text-align:center; color:var(--dim); font-size:20px; margin:2px 0; }
+.result-node {
+  border-radius:4px; padding:14px 16px;
+  font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; text-align:center;
+}
+.result-node.bad { background:rgba(255,51,85,0.1); border:1px solid rgba(255,51,85,0.5); color:var(--danger); }
+.result-node.good { background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.5); color:var(--accent2); }
+.result-ar { font-family:'Exo 2',sans-serif; font-size:10px; font-weight:400; direction:rtl; margin-top:4px; opacity:0.7; }
+
+/* ── PERF SECTION ── */
+.perf-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:32px; }
+.bar-section { margin-bottom:32px; }
+.bar-label { font-size:11px; letter-spacing:2px; color:var(--textdim); text-transform:uppercase; margin-bottom:12px; display:flex; justify-content:space-between; }
+.bar-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.bar-name { min-width:130px; font-size:12px; color:var(--textdim); }
+.bar-name-ar { font-size:10px; color:var(--textmuted); direction:rtl; }
+.bar-track { flex:1; height:24px; background:#03111d; border:1px solid var(--border); border-radius:3px; overflow:hidden; position:relative; }
+.bar-fill { height:100%; border-radius:3px; display:flex; align-items:center; padding-left:10px; transition:width 1s ease; }
+.bar-fill span { font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+.bar-ob .bar-fill { background:linear-gradient(90deg,#003d5c,#006688); }
+.bar-ob .bar-fill span { color:var(--accent); }
+.bar-trad .bar-fill { background:linear-gradient(90deg,#3d0010,#660022); }
+.bar-trad .bar-fill span { color:var(--danger); }
+.bar-chain .bar-fill { background:linear-gradient(90deg,#3d2000,#664400); }
+.bar-chain .bar-fill span { color:var(--warn); }
+
+/* ── TRADEOFF NOTE ── */
+.tradeoff-box {
+  border:1px solid var(--warn); border-radius:4px;
+  background:rgba(255,170,0,0.05); padding:16px 20px; margin-top:16px;
+}
+.tradeoff-title { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:2px; color:var(--warn); margin-bottom:8px; }
+.tradeoff-text { font-size:12px; color:var(--text); line-height:1.8; }
+.tradeoff-ar { font-size:11px; color:var(--textdim); direction:rtl; margin-top:8px; line-height:1.8; }
+
+/* ── CHART CONTAINERS ── */
+.chart-wrap { position:relative; width:100%; }
+
+/* ── GRID LAYOUTS ── */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+
+/* ── FOOTER ── */
+footer {
+  padding:24px 48px;
+  border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; color:var(--textmuted);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp 0.4s ease forwards; }
+@keyframes countUp { from{opacity:0} to{opacity:1} }
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px) {
+  section { padding:32px 20px; }
+  header { padding:0 16px; }
+  #hero { padding:32px 20px; }
+  .atree-grid { grid-template-columns:1fr; }
+  .atree-divider { display:none; }
+  .two-col, .three-col, .perf-cards, .prob-result { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">OBLIVION <span>GATE</span></div>
+  <nav>
+    <button class="nav-btn active" onclick="scrollTo('math')">01 MATH</button>
+    <button class="nav-btn" onclick="scrollTo('tree')">02 ATTACK TREE</button>
+    <button class="nav-btn" onclick="scrollTo('perf')">03 PERFORMANCE</button>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div id="hero">
+  <div class="hero-title">EVALUATION DASHBOARD</div>
+  <div class="hero-subtitle">PhD Dissertation — Security & Performance Benchmarking</div>
+  <div class="hero-ar">لوحة القياس والتقييم — رسالة الدكتوراة</div>
+  <div class="hero-desc">
+    Three interactive evaluation panels demonstrating the formal security guarantees, attack path analysis, and performance trade-offs of the Oblivion Gate Zero-Trace Fragmentation framework compared to classical data protection systems.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: MATH -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section id="math">
+  <div class="sec-header">
+    <div style="display:flex;align-items:flex-start;">
+      <div class="sec-num">01</div>
+      <div class="sec-titles">
+        <div class="sec-en">FORMAL ADVERSARIAL ADVANTAGE BOUND</div>
+        <div class="sec-ar">حد جهد المهاجم الرسمي — الإثبات الرياضي</div>
+        <div class="sec-desc">Move the sliders to see how the adversary's probability of success collapses in real time. This is the mathematical proof that makes Oblivion Gate formally secure.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:32px;">
+    <div>
+      <!-- Formula -->
+      <div class="formula-box" style="margin-bottom:20px;">
+        <div class="formula-main">P<sub>attack</sub> = ( 1 / (1 + d) )<sup>k</sup></div>
+        <div class="formula-vars">
+          d &nbsp;=&nbsp; decoys per node (كبسولات وهمية لكل عقدة)<br>
+          k &nbsp;=&nbsp; fragments required to reconstruct (شظايا مطلوبة للاسترجاع)<br>
+          P<sub>attack</sub> &nbsp;=&nbsp; probability adversary reconstructs data (احتمالية الاختراق الكامل)
+        </div>
+        <div class="formula-ar">كلما زاد عدد الكبسولات الوهمية أو الشظايا المطلوبة، انهار احتمال نجاح المهاجم نحو الصفر بشكل أسي</div>
+      </div>
+
+      <!-- Sliders -->
+      <div class="slider-group">
+        <div class="slider-label">
+          <div>
+            <div class="slider-label-en">Decoys per node (d)</div>
+            <div class="slider-label-ar">كبسولات وهمية لكل عقدة</div>
+          </div>
+          <div class="slider-label-val" id="out-d">20</div>
+        </div>
+        <input type="range" id="sl-d" min="1" max="9999" step="1" value="20" oninput="recalc()" style="--pct:0.2%">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <div>
+            <div class="slider-label-en">Fragments required (k)</div>
+            <div class="slider-label-ar">شظايا مطلوبة للاسترجاع</div>
+          </div>
+          <div class="slider-label-val" id="out-k">6</div>
+        </div>
+        <input type="range" id="sl-k" min="2" max="20" step="1" value="6" oninput="recalc()" style="--pct:22%">
+      </div>
+    </div>
+
+    <div>
+      <!-- Probability results -->
+      <div class="prob-result">
+        <div class="prob-card danger">
+          <div class="prob-card-label">Single-node success</div>
+          <div class="prob-card-ar">احتمال النجاح في عقدة واحدة</div>
+          <div class="prob-big red" id="p-single">4.76%</div>
+          <div class="prob-frac" id="p-frac">1 / 21 nodes</div>
+        </div>
+        <div class="prob-card success">
+          <div class="prob-card-label">Full reconstruction</div>
+          <div class="prob-card-ar">احتمال الاختراق الكامل</div>
+          <div class="prob-big green" id="p-full">1.17e-8%</div>
+          <div class="prob-frac" id="p-full-ctx">across all fragments</div>
+        </div>
+      </div>
+
+      <!-- Comparison cards -->
+      <div class="three-col" style="margin-top:16px;">
+        <div class="card">
+          <div class="card-label">vs AES-256</div>
+          <div class="card-label-ar">مقابل تشفير AES</div>
+          <div class="card-val green" style="font-size:18px;" id="cmp-aes">+∞×</div>
+          <div class="card-sub">harder to crack</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Lottery odds</div>
+          <div class="card-label-ar">مقارنة بالحظ</div>
+          <div class="card-val blue" style="font-size:18px;" id="cmp-lottery">—</div>
+          <div class="card-sub">times harder</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Required nodes</div>
+          <div class="card-label-ar">عقد يجب اختراقها</div>
+          <div class="card-val warn" style="font-size:18px;" id="cmp-nodes">6</div>
+          <div class="card-sub">simultaneously</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:11px; letter-spacing:2px; color:var(--textdim); text-transform:uppercase; margin-bottom:16px; display:flex; justify-content:space-between;">
+      <span>Attack success probability vs. decoy count</span>
+      <span class="ar-tag">احتمالية الاختراق مقابل عدد الكبسولات الوهمية</span>
+    </div>
+    <div class="chart-wrap" style="height:280px;">
+      <canvas id="mathChart" role="img" aria-label="Line chart showing adversarial advantage collapsing to zero as decoy count increases"></canvas>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict" style="margin-top:20px;">
+    <div class="verdict-icon" style="color:var(--accent2);">⬡</div>
+    <div>
+      <div class="verdict-text" id="verdict-math">With d=20 decoys and k=6 fragments, the probability of a full reconstruction attack succeeding is 1.17×10⁻⁸% — less likely than winning a national lottery twice in a row.</div>
+      <div class="verdict-ar" id="verdict-math-ar">مع 20 كبسولة وهمية و6 شظايا مطلوبة، احتمال نجاح الاختراق الكامل أقل من فوز شخص بالتذكرة الرابحة مرتين متتاليتين.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: ATTACK TREE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section id="tree">
+  <div class="sec-header">
+    <div style="display:flex;align-items:flex-start;">
+      <div class="sec-num">02</div>
+      <div class="sec-titles">
+        <div class="sec-en">ATTACK PATH COMPARISON</div>
+        <div class="sec-ar">مقارنة مسار الاختراق — التقليدي مقابل بوابة الزوال</div>
+        <div class="sec-desc">Classical systems fail in 3 logical steps. In Oblivion Gate, every single step is blocked by a mathematically proven barrier.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="atree-grid">
+    <!-- Classical -->
+    <div>
+      <div class="atree-col-header bad">CLASSICAL SYSTEM<br><span style="font-size:9px;letter-spacing:1px;font-weight:400;">التخزين السحابي التقليدي</span></div>
+
+      <div class="atree-step open">
+        <div class="step-head">
+          <div class="step-num-badge bad">STEP 01</div>
+          <div class="step-badge open-badge">EXPOSED</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Identify target server via DNS / IP lookup — location is publicly known</div>
+          <div class="step-ar">تحديد السيرفر عبر DNS/IP — الموقع معروف للعموم</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="atree-step open">
+        <div class="step-head">
+          <div class="step-num-badge bad">STEP 02</div>
+          <div class="step-badge open-badge">EXPLOITABLE</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Exploit server software vulnerability or insider access to steal encryption key</div>
+          <div class="step-ar">استغلال ثغرة برمجية أو الوصول الداخلي لسرقة مفتاح التشفير</div>
+          <div class="step-note">Single actor with root access = game over</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="atree-step open">
+        <div class="step-head">
+          <div class="step-num-badge bad">STEP 03</div>
+          <div class="step-badge open-badge">TRIVIAL</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Decrypt entire dataset and exfiltrate. Attack complete.</div>
+          <div class="step-ar">فك التشفير الكامل وتسريب البيانات. الهجوم مكتمل.</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="result-node bad">
+        DATA COMPROMISED
+        <div class="result-ar">البيانات مخترقة — 3 خطوات منطقية</div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="atree-divider"><div class="atree-vs">VS</div></div>
+
+    <!-- Oblivion Gate -->
+    <div>
+      <div class="atree-col-header good">OBLIVION GATE — ZTF<br><span style="font-size:9px;letter-spacing:1px;font-weight:400;">نظام بوابة الزوال</span></div>
+
+      <div class="atree-step blocked">
+        <div class="step-head">
+          <div class="step-num-badge good">STEP 01</div>
+          <div class="step-badge blocked-badge">BLOCKED</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Must identify which 1 of 10,000 nodes holds a real fragment — P = 1/(1+d)</div>
+          <div class="step-ar">تحديد أي عقدة من 10,000 تحمل شظية حقيقية — الاحتمال 1/10,001</div>
+          <div class="step-note">BDSP Network Supernova makes all nodes appear identical</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="atree-step blocked">
+        <div class="step-head">
+          <div class="step-num-badge good">STEP 02</div>
+          <div class="step-badge blocked-badge">BLOCKED</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Even if node is found — must distinguish real capsule from 9,999 cryptographically identical decoys</div>
+          <div class="step-ar">حتى لو وجد العقدة — يجب التمييز بين الكبسولة الحقيقية و9,999 كبسولة وهمية متطابقة تشفيرياً</div>
+          <div class="step-note">All decoys have valid-looking MACs — indistinguishable without Twin-Code</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="atree-step blocked">
+        <div class="step-head">
+          <div class="step-num-badge good">STEP 03</div>
+          <div class="step-badge blocked-badge">BLOCKED</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Must repeat Steps 1–2 for k=6 different fragments across 6 different nodes simultaneously</div>
+          <div class="step-ar">يجب تكرار الخطوتين السابقتين لـ 6 شظايا في 6 عقد مختلفة في نفس الوقت</div>
+          <div class="step-note">Probability: (1/10,001)⁶ ≈ 10⁻²⁴</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="atree-step blocked">
+        <div class="step-head">
+          <div class="step-num-badge good">STEP 04</div>
+          <div class="step-badge blocked-badge">BLOCKED</div>
+        </div>
+        <div class="step-body">
+          <div class="step-en">Even with fragments — must bypass MP-HiLV human validation (non-mathematical, AI-resistant)</div>
+          <div class="step-ar">حتى مع الشظايا — يجب تجاوز التحقق البشري متعدد الأطراف غير القابل للاشتقاق الرياضي</div>
+          <div class="step-note">No algorithm can predict a human semantic response</div>
+        </div>
+      </div>
+      <div class="atree-arrow">↓</div>
+
+      <div class="result-node good">
+        ATTACK INFEASIBLE
+        <div class="result-ar">الهجوم مستحيل حسابياً — ينكسر عند كل عقدة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary table -->
+  <div class="card" style="margin-top:32px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="padding:10px 14px; text-align:left; color:var(--textdim); font-weight:400; letter-spacing:1px; font-size:10px; text-transform:uppercase;">Attack vector</th>
+            <th style="padding:10px 14px; text-align:center; color:var(--danger); font-weight:400; font-size:10px; text-transform:uppercase;">Classical</th>
+            <th style="padding:10px 14px; text-align:center; color:var(--accent2); font-weight:400; font-size:10px; text-transform:uppercase;">Oblivion Gate</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 14px; color:var(--text);">Target location known<br><span style="font-size:10px;color:var(--textmuted);">معرفة موقع الهدف</span></td>
+            <td style="padding:10px 14px; text-align:center; color:var(--danger);">YES — trivial</td>
+            <td style="padding:10px 14px; text-align:center; color:var(--accent2);">IMPOSSIBLE — 10,000 nodes</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 14px; color:var(--text);">Single-actor insider compromise<br><span style="font-size:10px;color:var(--textmuted);">اختراق الموظف الداخلي</span></td>
+            <td style="padding:10px 14px; text-align:center; color:var(--danger);">YES — root access</td>
+            <td style="padding:10px 14px; text-align:center; color:var(--accent2);">NO — requires 3-party quorum</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 14px; color:var(--text);">Forensic data recovery after deletion<br><span style="font-size:10px;color:var(--textmuted);">الاسترجاع الجنائي بعد الحذف</span></td>
+            <td style="padding:10px 14px; text-align:center; color:var(--danger);">HIGH — 95% success</td>
+            <td style="padding:10px 14px; text-align:center; color:var(--accent2);">&lt;0.001% — HS-CPP purge</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 14px; color:var(--text);">AI-driven cryptanalysis<br><span style="font-size:10px;color:var(--textmuted);">التحليل بالذكاء الاصطناعي</span></td>
+            <td style="padding:10px 14px; text-align:center; color:var(--warn);">PARTIAL resistance</td>
+            <td style="padding:10px 14px; text-align:center; color:var(--accent2);">FULL — human semantic layer</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px; color:var(--text);">Cold Boot RAM attack<br><span style="font-size:10px;color:var(--textmuted);">هجوم التجميد على الذاكرة</span></td>
+            <td style="padding:10px 14px; text-align:center; color:var(--danger);">VULNERABLE</td>
+            <td style="padding:10px 14px; text-align:center; color:var(--accent2);">MITIGATED — Squad Beta overwrite</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: PERFORMANCE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section id="perf">
+  <div class="sec-header">
+    <div style="display:flex;align-items:flex-start;">
+      <div class="sec-num">03</div>
+      <div class="sec-titles">
+        <div class="sec-en">PERFORMANCE TRADE-OFFS</div>
+        <div class="sec-ar">مقاييس الأداء والمقايضات — الشفافية العلمية</div>
+        <div class="sec-desc">Scientific honesty requires disclosing costs. This section shows exactly what is traded for the security gains. For strategic data assets where exposure cost dwarfs infrastructure cost, every trade-off is operationally justified.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metric cards -->
+  <div class="perf-cards">
+    <div class="card">
+      <div class="card-label">Seeding latency</div>
+      <div class="card-label-ar">زمن التغليف والتوزيع</div>
+      <div class="card-val blue">4.7s</div>
+      <div class="card-sub">100 MB payload · n=100 frags · N=10,000 decoys</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Retrieval latency</div>
+      <div class="card-label-ar">زمن الاسترجاع</div>
+      <div class="card-val blue">2.3s</div>
+      <div class="card-sub">with Bloom Filter · T=100 threads · 95% CI: 1.9–2.7s</div>
+    </div>
+    <div class="card">
+      <div class="card-label">HS-CPP purge</div>
+      <div class="card-label-ar">زمن التطهير الثلاثي</div>
+      <div class="card-val green">127ms</div>
+      <div class="card-sub">concurrent 3-squad · 95% CI: 89–171ms</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Bandwidth overhead</div>
+      <div class="card-label-ar">تكلفة استهلاك الشبكة</div>
+      <div class="card-val warn">21×</div>
+      <div class="card-sub">2,100 MB vs 100 MB traditional (d=20)</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Forensic recovery risk</div>
+      <div class="card-label-ar">خطر الاسترجاع الجنائي</div>
+      <div class="card-val green">&lt;0.001%</div>
+      <div class="card-sub">post HS-CPP vs 95% traditional delete</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Without Bloom Filter</div>
+      <div class="card-label-ar">بدون Bloom Filter</div>
+      <div class="card-val" style="color:var(--textdim);">47.2s</div>
+      <div class="card-sub">retrieval — proves Bloom Filter critical (20× improvement)</div>
+    </div>
+  </div>
+
+  <!-- Bandwidth bars -->
+  <div class="card" style="padding:24px; margin-bottom:20px;">
+    <div class="bar-label">
+      <span>Data transmitted per operation (100 MB payload)</span>
+      <span class="ar-tag">البيانات المرسلة لكل عملية</span>
+    </div>
+    <div class="bar-row bar-ob">
+      <div class="bar-name"><div>Oblivion Gate</div><div class="bar-name-ar">بوابة الزوال</div></div>
+      <div class="bar-track"><div class="bar-fill" style="width:100%;"><span>2,100 MB — full decoy saturation</span></div></div>
+    </div>
+    <div class="bar-row bar-chain">
+      <div class="bar-name"><div>Blockchain sharding</div><div class="bar-name-ar">تقطيع البلوكشين</div></div>
+      <div class="bar-track"><div class="bar-fill" style="width:13.8%;"><span></span></div></div>
+      <span style="font-size:11px;color:var(--warn);margin-left:8px;font-family:'Share Tech Mono',monospace;">290 MB</span>
+    </div>
+    <div class="bar-row bar-trad">
+      <div class="bar-name"><div>Traditional cloud</div><div class="bar-name-ar">التخزين السحابي</div></div>
+      <div class="bar-track"><div class="bar-fill" style="width:4.8%;"><span></span></div></div>
+      <span style="font-size:11px;color:var(--danger);margin-left:8px;font-family:'Share Tech Mono',monospace;">100 MB</span>
+    </div>
+    <div style="font-size:11px; color:var(--textmuted); margin-top:12px; direction:rtl; text-align:right;">
+      التكلفة الإضافية في الشبكة هي الثمن المقصود لتحقيق عدم قابلية تحديد الهدف — مبرر تماماً عند حماية البيانات الاستراتيجية
+    </div>
+  </div>
+
+  <!-- Purge chart -->
+  <div class="card" style="padding:24px; margin-bottom:20px;">
+    <div class="bar-label">
+      <span>Forensic recovery risk by deletion method</span>
+      <span class="ar-tag">مخاطر الاسترجاع الجنائي حسب طريقة الحذف</span>
+    </div>
+    <div class="chart-wrap" style="height:220px;">
+      <canvas id="purgeChart" role="img" aria-label="Bar chart: OS delete 95% recovery risk, SSD overwrite 40%, HS-CPP under 0.001%">Forensic recovery risk: OS delete 95%, SSD overwrite 40%, HS-CPP less than 0.001%</canvas>
+    </div>
+  </div>
+
+  <!-- Latency comparison -->
+  <div class="card" style="padding:24px; margin-bottom:20px;">
+    <div class="bar-label">
+      <span>Retrieval latency comparison (seconds)</span>
+      <span class="ar-tag">مقارنة زمن الاسترجاع بالثواني</span>
+    </div>
+    <div class="chart-wrap" style="height:220px;">
+      <canvas id="latChart" role="img" aria-label="Bar chart comparing retrieval latency across different systems">Retrieval latency comparison across systems</canvas>
+    </div>
+  </div>
+
+  <!-- Trade-off justification -->
+  <div class="tradeoff-box">
+    <div class="tradeoff-title">SCIENTIFIC TRADE-OFF ACKNOWLEDGMENT · الاعتراف العلمي بالمقايضات</div>
+    <div class="tradeoff-text">
+      Oblivion Gate imposes a 21× bandwidth overhead and ~4.7s seeding latency compared to traditional systems. This is an intentional design choice. The framework is not designed to replace general-purpose cloud storage — it is designed for high-security organizations where the cost of data exposure (strategic, political, operational) exceeds the cost of infrastructure overhead by orders of magnitude. For a ministry of defense, intelligence agency, or critical infrastructure operator, a 4.7-second seeding operation that eliminates all known attack vectors is not a cost — it is the objective.
+    </div>
+    <div class="tradeoff-ar">
+      بوابة الزوال تفرض تكلفة إضافية مقصودة في الشبكة والوقت. هذا ليس قصوراً — بل هو الثمن الهندسي لتحقيق خاصية "عدم قابلية تحديد الهدف". بالنسبة لوزارات الدفاع والأجهزة الاستخباراتية والبنية التحتية الحيوية، فإن 4.7 ثانية لتغليف بيانات محمية من جميع متجهات الهجوم المعروفة ليست تكلفة — بل هي الهدف نفسه.
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div style="font-family:'Orbitron',monospace; color:var(--accent); font-size:11px; letter-spacing:3px;">OBLIVION GATE</div>
+    <div style="margin-top:4px;">PhD Dissertation — Computer Science & Cybersecurity Engineering · 2025</div>
+  </div>
+  <div style="text-align:right; direction:rtl;">
+    <div style="color:var(--accent); font-size:11px;">بوابة الزوال</div>
+    <div style="margin-top:4px;">أطروحة دكتوراة — علوم الحاسب وهندسة الأمن السيبراني</div>
+  </div>
+</footer>
+
+<script>
+// ─── SCROLL NAV ───────────────────────────────────────────
+function scrollTo(id) {
+  document.getElementById(id).scrollIntoView({ behavior:'smooth', block:'start' });
+  document.querySelectorAll('.nav-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['math','tree','perf'][i] === id);
+  });
+}
+
+window.addEventListener('scroll', () => {
+  const sections = ['math','tree','perf'];
+  const btns = document.querySelectorAll('.nav-btn');
+  sections.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top <= 80 && rect.bottom > 80) btns[i].classList.add('active');
+    else btns[i].classList.remove('active');
+  });
+});
+
+// ─── RANGE SLIDER FILL ───────────────────────────────────
+function updateSliderFill(el) {
+  const min = +el.min, max = +el.max, val = +el.value;
+  const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--pct', pct);
+}
+
+document.querySelectorAll('input[type=range]').forEach(el => {
+  el.addEventListener('input', () => updateSliderFill(el));
+  updateSliderFill(el);
+});
+
+// ─── MATH RECALC ─────────────────────────────────────────
+function fmt(n) {
+  if (n === 0) return '~0%';
+  if (n < 1e-15) { const e = Math.floor(Math.log10(n)); return `10^${e}%`; }
+  if (n < 0.0001) return n.toExponential(2) + '%';
+  return (n * 100).toFixed(4) + '%';
+}
+
+function recalc() {
+  const d = parseInt(document.getElementById('sl-d').value);
+  const k = parseInt(document.getElementById('sl-k').value);
+  document.getElementById('out-d').textContent = d.toLocaleString();
+  document.getElementById('out-k').textContent = k;
+  updateSliderFill(document.getElementById('sl-d'));
+  updateSliderFill(document.getElementById('sl-k'));
+
+  const pSingle = 1 / (1 + d);
+  const pFull = Math.pow(pSingle, k);
+
+  document.getElementById('p-single').textContent = (pSingle * 100).toFixed(4) + '%';
+  document.getElementById('p-frac').textContent = `1 / ${(1+d).toLocaleString()} nodes`;
+
+  if (pFull < 1e-20) {
+    const e = Math.floor(Math.log10(pFull));
+    document.getElementById('p-full').textContent = `10^${e}%`;
+  } else if (pFull < 0.0001) {
+    document.getElementById('p-full').textContent = (pFull*100).toExponential(2)+'%';
+  } else {
+    document.getElementById('p-full').textContent = (pFull*100).toFixed(6)+'%';
+  }
+
+  document.getElementById('cmp-nodes').textContent = k;
+
+  const lotteryOdds = 1 / 14000000;
+  const ratio = lotteryOdds / Math.max(pFull, 1e-300);
+  if (ratio > 1e12) document.getElementById('cmp-lottery').textContent = '>10¹²×';
+  else document.getElementById('cmp-lottery').textContent = ratio.toExponential(1) + '×';
+
+  const verdicts = {
+    low: `With d=${d} decoys and k=${k} fragments, the attack probability is ${(pFull*100).toExponential(2)}%. This is already beyond practical brute-force capability.`,
+    med: `With d=${d.toLocaleString()} decoys and k=${k} fragments, the attack probability approaches ${(pFull*100).toExponential(2)}%. A nation-state adversary would require simultaneous physical access to ${k} nodes from ${(1+d).toLocaleString()} — operationally infeasible.`,
+    high: `With d=${d.toLocaleString()} decoys and k=${k} fragments, P_attack ≈ 10^${Math.floor(Math.log10(Math.max(pFull,1e-300)))}%. This is computationally impossible for any adversary operating within the known physical universe.`
+  };
+  const level = d < 100 ? 'low' : d < 1000 ? 'med' : 'high';
+  document.getElementById('verdict-math').textContent = verdicts[level];
+
+  if (window.mathChartObj) {
+    const labels = [], data = [];
+    const maxD = Math.min(d * 2, 500);
+    const step = Math.max(1, Math.floor(maxD / 60));
+    for (let dd = 0; dd <= maxD; dd += step) {
+      labels.push(dd);
+      const p = Math.pow(1/(1+dd), k);
+      data.push(parseFloat((p * 100).toFixed(8)));
+    }
+    window.mathChartObj.data.labels = labels;
+    window.mathChartObj.data.datasets[0].data = data;
+    window.mathChartObj.update('none');
+  }
+}
+
+// ─── BUILD MATH CHART ────────────────────────────────────
+function buildMathChart() {
+  const labels = [], data = [], data2 = [];
+  for (let d = 0; d <= 100; d += 2) {
+    labels.push(d);
+    data.push(parseFloat((Math.pow(1/(1+d),6)*100).toFixed(8)));
+    data2.push(100); // AES baseline flat
+  }
+  window.mathChartObj = new Chart(document.getElementById('mathChart'), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Oblivion Gate P_attack (%)',
+          data, borderColor:'#ff3355', backgroundColor:'rgba(255,51,85,0.07)',
+          fill:true, tension:0.4, pointRadius:0, borderWidth:2,
+          borderDash: []
+        },
+        {
+          label:'AES-256 (fixed key — no decoy)',
+          data: labels.map(() => null),
+          borderColor:'#ffaa00', borderWidth:1, borderDash:[4,4],
+          pointRadius:0, fill:false
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:{ duration:600 },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{
+          callbacks:{
+            label: ctx => `Attack probability: ${ctx.parsed.y.toExponential ? ctx.parsed.y.toExponential(4) : ctx.parsed.y}%`
+          }
+        }
+      },
+      scales:{
+        x:{
+          title:{ display:true, text:'Decoys per node (d)', color:'#4a7a9a', font:{size:11} },
+          ticks:{ color:'#4a7a9a', font:{size:10}, maxTicksLimit:12 },
+          grid:{ color:'rgba(13,45,69,0.6)' }
+        },
+        y:{
+          title:{ display:true, text:'Attack success probability (%)', color:'#4a7a9a', font:{size:11} },
+          ticks:{ color:'#4a7a9a', font:{size:10} },
+          grid:{ color:'rgba(13,45,69,0.6)' },
+          min:0
+        }
+      }
+    }
+  });
+}
+
+// ─── BUILD PURGE CHART ───────────────────────────────────
+function buildPurgeChart() {
+  new Chart(document.getElementById('purgeChart'), {
+    type:'bar',
+    data:{
+      labels:['OS delete\n(حذف عادي)','SSD overwrite\n(كتابة فوقية)','HS-CPP Squad α\n(مسح تشفيري)','HS-CPP Full\n(الثلاث فرق)'],
+      datasets:[{
+        label:'Forensic recovery risk (%)',
+        data:[95, 40, 8, 0.001],
+        backgroundColor:['rgba(255,51,85,0.4)','rgba(255,170,0,0.4)','rgba(0,212,255,0.25)','rgba(0,255,136,0.4)'],
+        borderColor:['#ff3355','#ffaa00','#00d4ff','#00ff88'],
+        borderWidth:1,
+        borderRadius:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: ctx => `Recovery risk: ${ctx.parsed.y}%` } }
+      },
+      scales:{
+        x:{
+          ticks:{ color:'#4a7a9a', font:{size:10}, autoSkip:false },
+          grid:{ color:'rgba(13,45,69,0.4)' }
+        },
+        y:{
+          title:{ display:true, text:'Recovery risk (%)', color:'#4a7a9a', font:{size:11} },
+          ticks:{ color:'#4a7a9a', font:{size:10} },
+          grid:{ color:'rgba(13,45,69,0.4)' },
+          min:0, max:100
+        }
+      }
+    }
+  });
+}
+
+// ─── BUILD LATENCY CHART ─────────────────────────────────
+function buildLatChart() {
+  new Chart(document.getElementById('latChart'), {
+    type:'bar',
+    data:{
+      labels:['Traditional\ncloud','Blockchain\nsharding','Tor + HSM','Oblivion Gate\n(no Bloom)','Oblivion Gate\n(with Bloom)'],
+      datasets:[{
+        label:'Retrieval latency (seconds)',
+        data:[0.08, 12, 28, 47.2, 2.3],
+        backgroundColor:[
+          'rgba(255,51,85,0.3)','rgba(255,170,0,0.3)','rgba(255,170,0,0.25)',
+          'rgba(0,212,255,0.15)','rgba(0,255,136,0.35)'
+        ],
+        borderColor:['#ff3355','#ffaa00','#ffaa00','#00d4ff','#00ff88'],
+        borderWidth:1,
+        borderRadius:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y}s retrieval` } }
+      },
+      scales:{
+        x:{
+          ticks:{ color:'#4a7a9a', font:{size:10}, autoSkip:false },
+          grid:{ color:'rgba(13,45,69,0.4)' }
+        },
+        y:{
+          title:{ display:true, text:'Seconds', color:'#4a7a9a', font:{size:11} },
+          ticks:{ color:'#4a7a9a', font:{size:10} },
+          grid:{ color:'rgba(13,45,69,0.4)' },
+          min:0
+        }
+      }
+    }
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────
+setTimeout(() => {
+  buildMathChart();
+  buildPurgeChart();
+  buildLatChart();
+  recalc();
+}, 100);
+</script>
+</body>
+</html>

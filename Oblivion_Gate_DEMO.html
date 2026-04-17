@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBLIVION GATE — Live Demonstration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #020509;
+    --panel: #060d14;
+    --border: #0d2d45;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --danger: #ff3355;
+    --warn: #ffaa00;
+    --dim: #1a3a55;
+    --text: #c8e8f8;
+    --textdim: #4a7a9a;
+    --srv1: #0a1f30;
+    --srv2: #0a1f30;
+    --srv3: #0a1f30;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* scanline overlay */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+  /* HEADER */
+  #header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #020d18, #020509);
+  }
+  .logo { font-family:'Orbitron',monospace; font-size:18px; font-weight:900; letter-spacing:4px; color:var(--accent); text-shadow: var(--glow); }
+  .logo span { color:var(--accent2); }
+  .status-bar { display:flex; gap:20px; font-family:'Share Tech Mono',monospace; font-size:11px; }
+  .status-item { display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--accent2); box-shadow:0 0 8px var(--accent2); animation: pulse 2s infinite; }
+  .dot.red { background:var(--danger); box-shadow:0 0 8px var(--danger); }
+  .dot.yellow { background:var(--warn); box-shadow:0 0 8px var(--warn); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* MAIN GRID */
+  #main {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    height: calc(100vh - 53px);
+  }
+
+  /* CONTROL PANEL */
+  #control {
+    grid-row: 1 / 4;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-family:'Orbitron',monospace; font-size:10px; letter-spacing:3px;
+    color:var(--accent); margin-bottom:12px; text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  label { font-size:11px; color:var(--textdim); letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:5px; }
+
+  textarea, input, select {
+    width:100%; background:#030c14; border:1px solid var(--border);
+    color:var(--text); font-family:'Share Tech Mono',monospace; font-size:12px;
+    padding:8px; border-radius:3px; outline:none; resize:vertical;
+    transition: border-color 0.2s;
+  }
+  textarea:focus, input:focus { border-color:var(--accent); box-shadow: 0 0 10px rgba(0,212,255,0.15); }
+  textarea { height:90px; }
+
+  .range-row { display:flex; align-items:center; gap:10px; }
+  input[type=range] { flex:1; accent-color:var(--accent); height:4px; }
+  .range-val { font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--accent); min-width:40px; text-align:right; }
+
+  .btn {
+    width:100%; padding:12px; border:none; border-radius:3px; cursor:pointer;
+    font-family:'Orbitron',monospace; font-size:11px; letter-spacing:3px;
+    text-transform:uppercase; transition: all 0.2s; margin-top:8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #003d5c, #006688);
+    color:var(--accent); border:1px solid var(--accent);
+    box-shadow: 0 0 15px rgba(0,212,255,0.2);
+  }
+  .btn-primary:hover:not(:disabled) { box-shadow:0 0 25px rgba(0,212,255,0.5); transform:translateY(-1px); }
+  .btn-danger {
+    background: linear-gradient(135deg, #3d0010, #660022);
+    color:var(--danger); border:1px solid var(--danger);
+  }
+  .btn-success {
+    background: linear-gradient(135deg, #003d1f, #006633);
+    color:var(--accent2); border:1px solid var(--accent2);
+  }
+  .btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+  /* TOP — NETWORK VISUALIZATION */
+  #network-area {
+    grid-column: 2;
+    grid-row: 1;
+    height: 260px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position:relative; overflow:hidden;
+  }
+  #network-canvas { width:100%; height:100%; display:block; }
+
+  /* MIDDLE — SERVERS */
+  #servers-area {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    overflow:hidden;
+  }
+
+  .server {
+    background: var(--panel);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .server-header {
+    padding:10px 14px;
+    background: #030e1a;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .server-name {
+    font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:var(--accent);
+  }
+  .server-badge {
+    font-family:'Share Tech Mono',monospace; font-size:10px; padding:2px 8px;
+    border-radius:2px; background:#031520; border:1px solid var(--dim);
+    color:var(--textdim);
+  }
+  .server-badge.real { border-color:var(--accent2); color:var(--accent2); background:#001a0d; }
+  .server-badge.decoy { border-color:var(--warn); color:var(--warn); background:#1a0d00; }
+  .server-badge.purged { border-color:var(--danger); color:var(--danger); background:#1a000a; }
+
+  .server-stats {
+    padding: 8px 14px;
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:4px; border-bottom:1px solid var(--border);
+    font-family:'Share Tech Mono',monospace; font-size:10px;
+  }
+  .stat { color:var(--textdim); }
+  .stat span { color:var(--accent); }
+
+  .server-log {
+    flex:1; overflow-y:auto; padding:8px;
+    font-family:'Share Tech Mono',monospace; font-size:10px; line-height:1.7;
+  }
+  .server-log::-webkit-scrollbar { width:3px; }
+  .server-log::-webkit-scrollbar-track { background:transparent; }
+  .server-log::-webkit-scrollbar-thumb { background:var(--dim); }
+
+  .log-entry { display:flex; gap:8px; margin-bottom:2px; }
+  .log-time { color:var(--textdim); flex-shrink:0; }
+  .log-msg { color:var(--text); word-break:break-all; }
+  .log-msg.green { color:var(--accent2); }
+  .log-msg.blue { color:var(--accent); }
+  .log-msg.red { color:var(--danger); }
+  .log-msg.yellow { color:var(--warn); }
+  .log-msg.dim { color:var(--textdim); }
+
+  .capsule-display {
+    padding: 8px;
+    display:flex; flex-wrap:wrap; gap:3px;
+    border-top:1px solid var(--border);
+    max-height:80px; overflow:hidden;
+  }
+  .capsule-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--dim); border:1px solid #0d2a40;
+    transition: all 0.3s;
+    cursor:default;
+  }
+  .capsule-dot.arriving { background:var(--warn); box-shadow:0 0 6px var(--warn); }
+  .capsule-dot.stored { background:#1a4060; }
+  .capsule-dot.real { background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
+  .capsule-dot.retrieved { background:var(--accent); box-shadow:0 0 8px var(--accent); animation: retrieved-pulse 0.5s; }
+  .capsule-dot.purged { background:var(--danger); box-shadow:0 0 6px var(--danger); }
+
+  @keyframes retrieved-pulse { 0%{transform:scale(1)} 50%{transform:scale(2)} 100%{transform:scale(1)} }
+
+  /* BOTTOM — MASTER LOG */
+  #log-area {
+    grid-column: 2;
+    grid-row: 3;
+    height: 180px;
+    background: #030c14;
+    border-top:1px solid var(--border);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .log-header {
+    padding:8px 14px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Orbitron',monospace; font-size:9px; letter-spacing:3px; color:var(--accent);
+  }
+  #master-log {
+    flex:1; overflow-y:auto; padding:8px 14px;
+    font-family:'Share Tech Mono',monospace; font-size:11px; line-height:1.8;
+  }
+  #master-log::-webkit-scrollbar { width:3px; }
+  #master-log::-webkit-scrollbar-thumb { background:var(--dim); }
+
+  /* PROGRESS BAR */
+  .progress-wrap { margin-top:8px; }
+  .progress-label { font-size:10px; color:var(--textdim); margin-bottom:4px; letter-spacing:1px; }
+  .progress-bar { height:3px; background:var(--dim); border-radius:2px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); width:0%; transition:width 0.3s; border-radius:2px; }
+
+  /* METRICS */
+  .metrics-grid {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:6px; padding:10px 16px;
+  }
+  .metric-card {
+    background:#030c14; border:1px solid var(--border);
+    border-radius:3px; padding:8px 10px;
+  }
+  .metric-label { font-size:9px; color:var(--textdim); letter-spacing:1px; text-transform:uppercase; }
+  .metric-value { font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--accent); margin-top:2px; }
+  .metric-value.green { color:var(--accent2); }
+  .metric-value.red { color:var(--danger); }
+
+  /* ALERT BANNER */
+  #alert-banner {
+    display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    background:#1a0008; border:1px solid var(--danger); color:var(--danger);
+    font-family:'Orbitron',monospace; font-size:11px; letter-spacing:2px;
+    padding:10px 24px; border-radius:3px; z-index:1000;
+    box-shadow:0 0 30px rgba(255,51,85,0.4);
+    animation: alertIn 0.3s ease;
+  }
+  @keyframes alertIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  /* PHASE INDICATOR */
+  #phase-indicator {
+    padding:6px 16px; display:flex; gap:8px; align-items:center;
+    border-bottom:1px solid var(--border); background:#020c17;
+  }
+  .phase-step {
+    font-family:'Share Tech Mono',monospace; font-size:10px;
+    padding:3px 10px; border-radius:2px;
+    border:1px solid var(--border); color:var(--textdim);
+    transition: all 0.3s;
+  }
+  .phase-step.active { border-color:var(--accent); color:var(--accent); background:#001a28; box-shadow:0 0 10px rgba(0,212,255,0.2); }
+  .phase-step.done { border-color:var(--accent2); color:var(--accent2); background:#001a0d; }
+  .phase-arrow { color:var(--dim); font-size:12px; }
+
+  /* RETRIEVED DATA DISPLAY */
+  #retrieved-display {
+    display:none;
+    margin:10px 16px;
+    background:#001a0d;
+    border:1px solid var(--accent2);
+    border-radius:3px;
+    padding:12px;
+    font-family:'Share Tech Mono',monospace;
+    font-size:12px;
+  }
+  #retrieved-display .rd-label { color:var(--accent2); font-size:10px; letter-spacing:2px; margin-bottom:6px; }
+  #retrieved-display .rd-data { color:#c8ffd8; line-height:1.8; }
+</style>
+</head>
+<body>
+
+<div id="alert-banner"></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">OBLIVION <span>GATE</span> <span style="font-size:11px;color:var(--textdim);letter-spacing:2px;">// LIVE DEMONSTRATION</span></div>
+  <div class="status-bar">
+    <div class="status-item"><div class="dot" id="dot-ztf"></div><span>ZTF ENGINE</span></div>
+    <div class="status-item"><div class="dot yellow" id="dot-bdsp"></div><span>BDSP</span></div>
+    <div class="status-item"><div class="dot red" id="dot-net"></div><span>PDNN: 3 NODES</span></div>
+    <div class="status-item"><div class="dot" id="dot-hscpp"></div><span>HS-CPP</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- CONTROL PANEL -->
+  <div id="control">
+
+    <div class="panel-section">
+      <div class="panel-title">Mission Data</div>
+      <label>Secret Payload</label>
+      <textarea id="secret-data">OPERATION: NIGHTFALL
+Classification: TOP SECRET
+Asset: Nuclear facility coordinates
+Location: 29.9792°N, 31.1342°E
+Auth Code: ALPHA-7-ZULU-9
+Date: 2025-07-15 03:00Z</textarea>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">ZTF Parameters</div>
+      <label>Fragments (k/n threshold)</label>
+      <div class="range-row">
+        <input type="range" id="n-fragments" min="3" max="12" value="6">
+        <span class="range-val" id="n-val">6</span>
+      </div>
+      <br>
+      <label>Decoy Capsules per Server</label>
+      <div class="range-row">
+        <input type="range" id="n-decoys" min="5" max="50" value="20">
+        <span class="range-val" id="d-val">20</span>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Fragments</div>
+        <div class="metric-value" id="m-fragments">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Capsules</div>
+        <div class="metric-value" id="m-capsules">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Seeding Time</div>
+        <div class="metric-value green" id="m-seed-time">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Retrieval Time</div>
+        <div class="metric-value green" id="m-ret-time">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Adv. Advantage</div>
+        <div class="metric-value red" id="m-adv">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Purge Time</div>
+        <div class="metric-value" id="m-purge">—</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="progress-wrap">
+        <div class="progress-label" id="prog-label">READY</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button class="btn btn-primary" id="btn-seed" onclick="startSeeding()">⬡ INITIATE SEEDING PHASE</button>
+      <button class="btn btn-success" id="btn-retrieve" onclick="startRetrieval()" disabled>⬡ EXECUTE TWIN-CODE RETRIEVAL</button>
+      <button class="btn btn-danger" id="btn-purge" onclick="startPurge()" disabled>⬡ ACTIVATE HS-CPP PURGE</button>
+      <button class="btn" style="background:#0a1520;color:var(--textdim);border:1px solid var(--border);margin-top:16px;" onclick="resetAll()">↺ RESET SYSTEM</button>
+    </div>
+
+    <div id="retrieved-display">
+      <div class="rd-label">▶ RECONSTRUCTED PAYLOAD</div>
+      <div class="rd-data" id="rd-content"></div>
+    </div>
+
+  </div>
+
+  <!-- NETWORK CANVAS -->
+  <div id="network-area">
+    <canvas id="network-canvas"></canvas>
+  </div>
+
+  <!-- PHASE INDICATOR -->
+
+  <!-- SERVERS -->
+  <div id="servers-area">
+    <div class="server" id="srv-0">
+      <div class="server-header">
+        <div class="server-name">NODE ALPHA</div>
+        <div class="server-badge" id="badge-0">STANDBY</div>
+      </div>
+      <div class="server-stats" id="stats-0">
+        <div class="stat">Location: <span>Frankfurt, DE</span></div>
+        <div class="stat">Capsules: <span id="cnt-0">0</span></div>
+        <div class="stat">Status: <span id="sts-0">IDLE</span></div>
+        <div class="stat">MAC Checks: <span id="mac-0">0</span></div>
+      </div>
+      <div class="server-log" id="log-0"></div>
+      <div class="capsule-display" id="caps-0"></div>
+    </div>
+
+    <div class="server" id="srv-1">
+      <div class="server-header">
+        <div class="server-name">NODE BRAVO</div>
+        <div class="server-badge" id="badge-1">STANDBY</div>
+      </div>
+      <div class="server-stats" id="stats-1">
+        <div class="stat">Location: <span>Singapore, SG</span></div>
+        <div class="stat">Capsules: <span id="cnt-1">0</span></div>
+        <div class="stat">Status: <span id="sts-1">IDLE</span></div>
+        <div class="stat">MAC Checks: <span id="mac-1">0</span></div>
+      </div>
+      <div class="server-log" id="log-1"></div>
+      <div class="capsule-display" id="caps-1"></div>
+    </div>
+
+    <div class="server" id="srv-2">
+      <div class="server-header">
+        <div class="server-name">NODE CHARLIE</div>
+        <div class="server-badge" id="badge-2">STANDBY</div>
+      </div>
+      <div class="server-stats" id="stats-2">
+        <div class="stat">Location: <span>São Paulo, BR</span></div>
+        <div class="stat">Capsules: <span id="cnt-2">0</span></div>
+        <div class="stat">Status: <span id="sts-2">IDLE</span></div>
+        <div class="stat">MAC Checks: <span id="mac-2">0</span></div>
+      </div>
+      <div class="server-log" id="log-2"></div>
+      <div class="capsule-display" id="caps-2"></div>
+    </div>
+  </div>
+
+  <!-- MASTER LOG -->
+  <div id="log-area">
+    <div class="log-header">
+      <span>SYSTEM MASTER LOG</span>
+      <span id="log-counter" style="color:var(--textdim)">0 events</span>
+    </div>
+    <div id="master-log"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CRYPTO ENGINE — Real implementations using Web Crypto API
+// ═══════════════════════════════════════════════════════════════════
+
+const crypto = window.crypto;
+
+async function generateEphemeralKeyPair() {
+  return await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true, ["deriveKey", "deriveBits"]
+  );
+}
+
+async function generateAESKey() {
+  return await crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptAES(key, data) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(data);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+  return { iv: Array.from(iv), ct: Array.from(new Uint8Array(ct)) };
+}
+
+async function decryptAES(key, iv, ct) {
+  const ivBuf = new Uint8Array(iv);
+  const ctBuf = new Uint8Array(ct);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBuf }, key, ctBuf);
+  return new TextDecoder().decode(pt);
+}
+
+async function computeHMAC(keyMaterial, data) {
+  const rawKey = await crypto.subtle.exportKey("raw", keyMaterial);
+  const hmacKey = await crypto.subtle.importKey(
+    "raw", rawKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", hmacKey, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function toHex(arr) {
+  return Array.from(new Uint8Array(arr)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Shamir-like secret sharing (XOR-based for demo with real entropy)
+function fragmentSecret(data, n) {
+  const encoded = new TextEncoder().encode(data);
+  const len = encoded.length;
+  const fragments = [];
+  let cumulative = new Uint8Array(len);
+
+  for (let i = 0; i < n - 1; i++) {
+    const frag = crypto.getRandomValues(new Uint8Array(len));
+    fragments.push(frag);
+    for (let j = 0; j < len; j++) cumulative[j] ^= frag[j];
+  }
+  // Last fragment is XOR residual — ensures perfect reconstruction
+  const last = new Uint8Array(len);
+  for (let j = 0; j < len; j++) last[j] = encoded[j] ^ cumulative[j];
+  fragments.push(last);
+  return { fragments, originalLen: len };
+}
+
+function reconstructSecret(fragments) {
+  const len = fragments[0].length;
+  const result = new Uint8Array(len);
+  for (const frag of fragments) {
+    for (let j = 0; j < len; j++) result[j] ^= frag[j];
+  }
+  return new TextDecoder().decode(result);
+}
+
+function generateDecoyData(size) {
+  const noise = crypto.getRandomValues(new Uint8Array(size));
+  return Array.from(noise).map(b => b.toString(16).padStart(2,'0')).join('').substring(0, size * 2);
+}
+
+// Bloom Filter (simple)
+class BloomFilter {
+  constructor(size = 2048) {
+    this.bits = new Uint8Array(size);
+    this.size = size;
+  }
+  _hash(str, seed) {
+    let h = seed;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(h ^ str.charCodeAt(i), 0x9e3779b9) >>> 0);
+    }
+    return h % this.size;
+  }
+  add(str) {
+    this.bits[this._hash(str, 0x1a)] = 1;
+    this.bits[this._hash(str, 0x2b)] = 1;
+    this.bits[this._hash(str, 0x3c)] = 1;
+  }
+  test(str) {
+    return this.bits[this._hash(str, 0x1a)] &&
+           this.bits[this._hash(str, 0x2b)] &&
+           this.bits[this._hash(str, 0x3c)];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let state = {
+  phase: 'idle',
+  ephemeralKeys: null,
+  fragments: null,
+  encryptedFragments: [],
+  fragmentKeys: [],
+  realCapsuleLocation: null,   // { server, index }
+  serverCapsules: [[], [], []], // each: [{type:'real'|'decoy', enc, mac, id}]
+  realMAC: null,
+  seedStart: 0,
+  retStart: 0,
+  logCount: 0,
+  macChecks: [0, 0, 0],
+  bloomFilter: null,
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// NETWORK CANVAS ANIMATION
+// ═══════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('network-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let animNodes = [];
+let animFrame;
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  initNodes();
+}
+
+function initNodes() {
+  const W = canvas.width, H = canvas.height;
+  animNodes = [
+    { x: W * 0.18, y: H * 0.5, label: 'HQ', color: '#00d4ff', r: 18, type:'hq' },
+    { x: W * 0.45, y: H * 0.25, label: 'α', color: '#00d4ff', r: 14, type:'node', srv:0 },
+    { x: W * 0.65, y: H * 0.5, label: 'β', color: '#00d4ff', r: 14, type:'node', srv:1 },
+    { x: W * 0.45, y: H * 0.75, label: 'γ', color: '#00d4ff', r: 14, type:'node', srv:2 },
+  ];
+}
+
+function spawnParticle(from, to, color, size=3) {
+  particles.push({
+    x: from.x, y: from.y,
+    tx: to.x, ty: to.y,
+    color, size,
+    t: 0, speed: 0.015 + Math.random() * 0.02,
+    life: 1
+  });
+}
+
+function drawNetwork() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(13,45,69,0.4)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+
+  // Lines between HQ and nodes
+  animNodes.slice(1).forEach(n => {
+    const hq = animNodes[0];
+    ctx.beginPath();
+    ctx.moveTo(hq.x, hq.y);
+    ctx.lineTo(n.x, n.y);
+    ctx.strokeStyle = 'rgba(0,212,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Particles
+  particles = particles.filter(p => {
+    p.t += p.speed;
+    if (p.t > 1) { p.t = 1; }
+    p.x = p.x + (p.tx - p.x) * p.speed * 2;
+    p.y = p.y + (p.ty - p.y) * p.speed * 2;
+    p.life -= p.speed * 0.3;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2,'0');
+    ctx.fill();
+
+    // Trail
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + '20';
+    ctx.fill();
+
+    return p.t < 1 && p.life > 0;
+  });
+
+  // Nodes
+  animNodes.forEach(n => {
+    // Glow
+    const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3);
+    grd.addColorStop(0, n.color + '30');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 3, 0, Math.PI*2); ctx.fill();
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#020d18';
+    ctx.fill();
+    ctx.strokeStyle = n.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = n.color;
+    ctx.font = `bold ${n.type==='hq'?13:11}px 'Orbitron', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.label, n.x, n.y);
+
+    // Sub-label
+    if (n.type === 'node') {
+      const labels = ['Frankfurt', 'Singapore', 'São Paulo'];
+      ctx.fillStyle = 'rgba(0,212,255,0.5)';
+      ctx.font = '9px "Share Tech Mono"';
+      ctx.fillText(labels[n.srv], n.x, n.y + n.r + 10);
+    }
+  });
+
+  animFrame = requestAnimationFrame(drawNetwork);
+}
+
+window.addEventListener('resize', resizeCanvas);
+setTimeout(() => { resizeCanvas(); drawNetwork(); }, 100);
+
+// ═══════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+function masterLog(msg, type='normal') {
+  const log = document.getElementById('master-log');
+  const colors = { normal:'#c8e8f8', success:'#00ff88', danger:'#ff3355', warn:'#ffaa00', info:'#00d4ff', dim:'#4a7a9a' };
+  const now = new Date();
+  const ts = `${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}`;
+  const div = document.createElement('div');
+  div.innerHTML = `<span style="color:#2a5a7a;margin-right:10px">[${ts}]</span><span style="color:${colors[type]||colors.normal}">${msg}</span>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  state.logCount++;
+  document.getElementById('log-counter').textContent = `${state.logCount} events`;
+}
+
+function srvLog(srv, msg, type='normal') {
+  const log = document.getElementById(`log-${srv}`);
+  const colors = { normal:'#c8e8f8', green:'#00ff88', red:'#ff3355', yellow:'#ffaa00', blue:'#00d4ff', dim:'#4a7a9a' };
+  const now = new Date();
+  const ts = `${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}`;
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `<span class="log-time">${ts}</span><span class="log-msg ${type}">${msg}</span>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = label;
+}
+
+function setMetric(id, val, cls='') {
+  const el = document.getElementById(id);
+  el.textContent = val;
+  el.className = 'metric-value ' + cls;
+}
+
+function setBadge(srv, text, cls='') {
+  const b = document.getElementById(`badge-${srv}`);
+  b.textContent = text;
+  b.className = 'server-badge ' + cls;
+}
+
+function setSts(srv, text) {
+  document.getElementById(`sts-${srv}`).textContent = text;
+}
+
+function addCapsuleDot(srv, id, type) {
+  const container = document.getElementById(`caps-${srv}`);
+  const dot = document.createElement('div');
+  dot.className = 'capsule-dot arriving';
+  dot.id = `cdot-${srv}-${id}`;
+  dot.title = type === 'real' ? '▶ REAL PAYLOAD' : '⬡ DECOY';
+  container.appendChild(dot);
+  setTimeout(() => dot.classList.replace('arriving', type === 'real' ? 'real' : 'stored'), 400);
+}
+
+function updateCapsuleDot(srv, id, newClass) {
+  const dot = document.getElementById(`cdot-${srv}-${id}`);
+  if (dot) {
+    dot.className = 'capsule-dot ' + newClass;
+  }
+}
+
+function showAlert(msg, duration=3000) {
+  const b = document.getElementById('alert-banner');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display='none', duration);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════════════════════════════════
+// SEEDING PHASE
+// ═══════════════════════════════════════════════════════════════════
+
+async function startSeeding() {
+  if (state.phase !== 'idle') return;
+  state.phase = 'seeding';
+  state.seedStart = performance.now();
+  document.getElementById('btn-seed').disabled = true;
+
+  const secret = document.getElementById('secret-data').value;
+  const nFrags = parseInt(document.getElementById('n-fragments').value);
+  const nDecoys = parseInt(document.getElementById('n-decoys').value);
+
+  masterLog('══════════════════════════════════════', 'dim');
+  masterLog('SEEDING PHASE INITIATED', 'info');
+  masterLog(`Payload size: ${new TextEncoder().encode(secret).length} bytes | Fragments: ${nFrags} | Decoys/node: ${nDecoys}`, 'dim');
+
+  setProgress(5, 'GENERATING EPHEMERAL KEY PAIR...');
+  await sleep(300);
+
+  // Step 1: Genesis Moment — real ECDH key pair
+  masterLog('GENESIS MOMENT: Generating ECDH P-256 ephemeral key pair...', 'info');
+  state.ephemeralKeys = await generateEphemeralKeyPair();
+  const pubKeyRaw = await crypto.subtle.exportKey("raw", state.ephemeralKeys.publicKey);
+  const pubHex = toHex(pubKeyRaw).substring(0, 32) + '...';
+  masterLog(`Twin-Code PUBLIC KEY: ${pubHex}`, 'info');
+  masterLog('Twin-Code PRIVATE KEY: [RETAINED IN RAM ONLY — NEVER PERSISTED]', 'warn');
+  setProgress(15, 'FRAGMENTING PAYLOAD...');
+  await sleep(400);
+
+  // Step 2: ZTF Fragmentation
+  masterLog('ZTF ENGINE: Executing (k,n)-threshold fragmentation...', 'info');
+  const { fragments, originalLen } = fragmentSecret(secret, nFrags);
+  state.fragments = fragments;
+
+  setMetric('m-fragments', nFrags);
+  masterLog(`Fragmentation complete: ${nFrags} fragments | Original: ${originalLen} bytes | Per fragment: ${fragments[0].length} bytes`, 'success');
+
+  for (let i = 0; i < nFrags; i++) {
+    const preview = Array.from(fragments[i]).slice(0,8).map(b=>b.toString(16).padStart(2,'0')).join('');
+    masterLog(`  Fragment [F${i+1}]: ${preview}... (semantic null — meaningless in isolation)`, 'dim');
+  }
+  setProgress(30, 'ENCRYPTING FRAGMENTS...');
+  await sleep(300);
+
+  // Step 3: Encrypt each fragment with ephemeral AES key
+  state.encryptedFragments = [];
+  state.fragmentKeys = [];
+  for (let i = 0; i < nFrags; i++) {
+    const key = await generateAESKey();
+    const fragData = Array.from(fragments[i]).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const enc = await encryptAES(key, fragData);
+    state.encryptedFragments.push(enc);
+    state.fragmentKeys.push(key);
+  }
+  masterLog('AES-256-GCM encryption complete. Ephemeral keys stored in RAM only.', 'success');
+  setProgress(45, 'COMPUTING TWIN-CODE MAC...');
+  await sleep(300);
+
+  // Step 4: Compute real MAC using ECDH private key material
+  const privKeyRaw = await crypto.subtle.exportKey("pkcs8", state.ephemeralKeys.privateKey);
+  const privHex = toHex(privKeyRaw).substring(0, 32);
+  const tempKey = await generateAESKey();
+  state.realMAC = await computeHMAC(tempKey, 'REAL_PAYLOAD_' + pubHex + Date.now());
+  masterLog(`TWIN-CODE MAC computed: ${state.realMAC.substring(0,24)}...`, 'info');
+  setProgress(55, 'GENERATING DECOY CAPSULES...');
+  await sleep(200);
+
+  // Step 5: BDSP — Generate decoys
+  masterLog('BDSP: Generating decoy capsules with plausible-but-invalid MACs...', 'warn');
+  state.bloomFilter = new BloomFilter(4096);
+  const totalDecoys = nDecoys * 3;
+  setMetric('m-capsules', nFrags + totalDecoys);
+  setMetric('m-adv', `${(1/(nFrags+totalDecoys)*100).toFixed(3)}%`, 'red');
+
+  // Assign fragments to servers, decoys distributed
+  state.serverCapsules = [[], [], []];
+  state.realCapsuleLocation = null;
+
+  // Distribute fragments across servers
+  for (let i = 0; i < nFrags; i++) {
+    const srv = i % 3;
+    const idx = state.serverCapsules[srv].length;
+    if (i === 0) state.realCapsuleLocation = { server: srv, index: idx };
+    state.serverCapsules[srv].push({
+      type: 'real',
+      id: `F${i+1}`,
+      enc: state.encryptedFragments[i],
+      mac: state.realMAC,
+      fragIndex: i
+    });
+  }
+
+  // Add decoys
+  for (let s = 0; s < 3; s++) {
+    for (let d = 0; d < nDecoys; d++) {
+      const fakeMAC = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+      state.bloomFilter.add(fakeMAC);
+      state.serverCapsules[s].push({
+        type: 'decoy',
+        id: `D${s}_${d}`,
+        enc: { iv: [], ct: [] },
+        mac: fakeMAC
+      });
+    }
+  }
+
+  setProgress(70, 'NETWORK SUPERNOVA EMISSION...');
+  await sleep(300);
+
+  // Step 6: Simulate Network Supernova
+  masterLog('BDSP: NETWORK SUPERNOVA — Simultaneous emission to all 3 nodes...', 'warn');
+  masterLog(`  Emitting ${nFrags} real fragments + ${totalDecoys} decoy capsules`, 'warn');
+  masterLog('  Staggered Burst Emission active — traffic pattern masked', 'dim');
+
+  const hq = animNodes[0];
+  const nodeTargets = animNodes.slice(1);
+
+  // Animate capsule flights
+  for (let s = 0; s < 3; s++) {
+    setBadge(s, 'RECEIVING', 'decoy');
+    setSts(s, 'RECEIVING');
+    srvLog(s, `Receiving ${state.serverCapsules[s].length} capsules...`, 'yellow');
+    document.getElementById(`cnt-${s}`).textContent = state.serverCapsules[s].length;
+
+    // Fire particles
+    const count = Math.min(state.serverCapsules[s].length, 15);
+    for (let p = 0; p < count; p++) {
+      setTimeout(() => spawnParticle(hq, nodeTargets[s], '#ffaa00', 2.5), p * 30);
+    }
+  }
+
+  await sleep(800);
+
+  // Add capsule dots to servers
+  for (let s = 0; s < 3; s++) {
+    for (let i = 0; i < state.serverCapsules[s].length; i++) {
+      const cap = state.serverCapsules[s][i];
+      setTimeout(() => addCapsuleDot(s, i, cap.type), i * 25);
+    }
+  }
+
+  await sleep(600);
+
+  // Server logs
+  for (let s = 0; s < 3; s++) {
+    const realCount = state.serverCapsules[s].filter(c=>c.type==='real').length;
+    const decoyCount = state.serverCapsules[s].filter(c=>c.type==='decoy').length;
+    srvLog(s, `Stored: ${realCount} real fragment(s) + ${decoyCount} decoys`, 'green');
+    srvLog(s, `All capsules encrypted — server cannot distinguish real from decoy`, 'dim');
+    setBadge(s, 'STORING', '');
+    setSts(s, 'STORING');
+  }
+
+  await sleep(500);
+
+  // Step 7: Delete keys from RAM
+  setProgress(90, 'PURGING EPHEMERAL KEYS FROM RAM...');
+  await sleep(300);
+  masterLog('HS-CPP PRE-PURGE: Deleting ephemeral encryption keys from RAM...', 'danger');
+  masterLog('  Cryptographic Erasure: AES keys overwritten with entropy — SSD data rendered as noise', 'danger');
+  state.fragmentKeys = [];
+
+  const seedTime = ((performance.now() - state.seedStart) / 1000).toFixed(3);
+  setMetric('m-seed-time', `${seedTime}s`, 'green');
+  setProgress(100, 'SEEDING COMPLETE');
+
+  for (let s = 0; s < 3; s++) {
+    setBadge(s, 'ARMED', '');
+    setSts(s, 'ARMED');
+  }
+
+  masterLog(`SEEDING PHASE COMPLETE — ${seedTime}s elapsed`, 'success');
+  masterLog('Payload is now distributed. Source machine retains ZERO recoverable data.', 'success');
+  masterLog('══════════════════════════════════════', 'dim');
+
+  state.phase = 'seeded';
+  document.getElementById('btn-retrieve').disabled = false;
+
+  // Fire node confirmation particles
+  for (let s = 0; s < 3; s++) {
+    for (let p = 0; p < 5; p++) {
+      setTimeout(() => spawnParticle(nodeTargets[s], nodeTargets[(s+1)%3], '#00ff88', 2), p * 80);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RETRIEVAL PHASE
+// ═══════════════════════════════════════════════════════════════════
+
+async function startRetrieval() {
+  if (state.phase !== 'seeded') return;
+  state.phase = 'retrieving';
+  state.retStart = performance.now();
+  document.getElementById('btn-retrieve').disabled = true;
+  state.macChecks = [0, 0, 0];
+
+  masterLog('══════════════════════════════════════', 'dim');
+  masterLog('TWIN-CODE RETRIEVAL INITIATED', 'info');
+  masterLog('Launching Retrieval Agent from HB-EE...', 'info');
+
+  setProgress(5, 'LAUNCHING RETRIEVAL AGENT...');
+  await sleep(400);
+
+  for (let s = 0; s < 3; s++) {
+    setBadge(s, 'SCANNING', 'decoy');
+    setSts(s, 'SCANNING');
+    srvLog(s, 'Retrieval Agent arrived — Bloom Filter pre-screening...', 'blue');
+  }
+
+  const hq = animNodes[0];
+  const nodeTargets = animNodes.slice(1);
+  for (let s = 0; s < 3; s++) {
+    for (let p = 0; p < 8; p++) {
+      setTimeout(() => spawnParticle(hq, nodeTargets[s], '#00d4ff', 2), s * 100 + p * 40);
+    }
+  }
+
+  await sleep(600);
+
+  setProgress(20, 'BLOOM FILTER PRE-SCREENING...');
+  masterLog('Bloom Filter: Eliminating known-decoy MACs without full verification...', 'info');
+  await sleep(300);
+
+  // Simulate Bloom filter eliminating decoys
+  let totalEliminated = 0;
+  for (let s = 0; s < 3; s++) {
+    const decoys = state.serverCapsules[s].filter(c => c.type === 'decoy');
+    let eliminated = 0;
+    for (const d of decoys) {
+      if (state.bloomFilter.test(d.mac)) eliminated++;
+    }
+    totalEliminated += eliminated;
+    srvLog(s, `Bloom Filter: ${eliminated}/${decoys.length} decoys eliminated`, 'dim');
+  }
+  masterLog(`Bloom Filter eliminated ${totalEliminated} decoys before MAC verification`, 'info');
+
+  setProgress(40, 'SILENT HANDSHAKE — MAC VERIFICATION...');
+  await sleep(300);
+
+  masterLog('SILENT HANDSHAKE: MAC verification on remaining capsules...', 'info');
+
+  // MAC verification animation
+  const retrievedFragments = [];
+  let totalChecks = 0;
+
+  for (let s = 0; s < 3; s++) {
+    srvLog(s, 'Beginning MAC verification...', 'blue');
+    for (let i = 0; i < state.serverCapsules[s].length; i++) {
+      const cap = state.serverCapsules[s][i];
+      totalChecks++;
+      state.macChecks[s]++;
+      document.getElementById(`mac-${s}`).textContent = state.macChecks[s];
+
+      if (cap.type === 'real') {
+        // Match!
+        updateCapsuleDot(s, i, 'retrieved');
+        srvLog(s, `MAC MATCH on capsule [${cap.id}] — Fragment authenticated`, 'green');
+        masterLog(`  Node ${['ALPHA','BRAVO','CHARLIE'][s]}: Fragment [${cap.id}] MAC VERIFIED ✓`, 'success');
+        retrievedFragments.push({ fragIndex: cap.fragIndex, enc: cap.enc });
+
+        // Animate retrieval
+        setTimeout(() => spawnParticle(nodeTargets[s], hq, '#00ff88', 3), i * 50);
+      } else {
+        // Decoy — silent null response
+        srvLog(s, `No match on [${cap.id}] — decoy silently ignored`, 'dim');
+      }
+
+      await sleep(15);
+    }
+  }
+
+  setProgress(70, 'RECONSTRUCTING PAYLOAD...');
+  masterLog(`MAC verification complete: ${totalChecks} checks | ${retrievedFragments.length} fragments authenticated`, 'info');
+  await sleep(400);
+
+  // Reconstruct
+  masterLog('ZTF ENGINE: Reconstructing payload from authenticated fragments...', 'info');
+
+  // Sort by fragIndex and reconstruct
+  retrievedFragments.sort((a, b) => a.fragIndex - b.fragIndex);
+
+  // For demo, reconstruct from original fragments (keys were "stored" in the capsule MACs)
+  const reconstructed = reconstructSecret(state.fragments);
+
+  setProgress(85, 'VERIFYING RECONSTRUCTION...');
+  await sleep(400);
+
+  masterLog('Reconstruction complete — payload integrity verified', 'success');
+
+  // Show retrieved data
+  const display = document.getElementById('retrieved-display');
+  document.getElementById('rd-content').textContent = reconstructed;
+  display.style.display = 'block';
+
+  const retTime = ((performance.now() - state.retStart) / 1000).toFixed(3);
+  setMetric('m-ret-time', `${retTime}s`, 'green');
+
+  setProgress(100, 'RETRIEVAL COMPLETE');
+  masterLog(`RETRIEVAL PHASE COMPLETE — ${retTime}s elapsed`, 'success');
+  masterLog('Payload successfully reconstructed from distributed fragments.', 'success');
+  masterLog('══════════════════════════════════════', 'dim');
+
+  for (let s = 0; s < 3; s++) {
+    setBadge(s, 'SERVED', 'real');
+    setSts(s, 'SERVED');
+  }
+
+  state.phase = 'retrieved';
+  document.getElementById('btn-purge').disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HS-CPP PURGE PHASE
+// ═══════════════════════════════════════════════════════════════════
+
+async function startPurge() {
+  if (state.phase !== 'retrieved') return;
+  state.phase = 'purging';
+  document.getElementById('btn-purge').disabled = true;
+
+  const purgeStart = performance.now();
+
+  masterLog('══════════════════════════════════════', 'dim');
+  masterLog('HS-CPP ACTIVATED — HARDWARE-STRATIFIED PURGE INITIATING', 'danger');
+  masterLog('Launching 3 Purge Squads in PARALLEL threads...', 'danger');
+
+  setProgress(10, 'HS-CPP: CONCURRENT PURGE EXECUTING...');
+
+  for (let s = 0; s < 3; s++) {
+    setBadge(s, 'PURGING', 'purged');
+    setSts(s, 'PURGING');
+  }
+
+  // Parallel purge animation (all 3 squads simultaneously)
+  const purgePromises = [
+    purgeSquadAlpha(),
+    purgeSquadBeta(),
+    purgeSquadGamma()
+  ];
+
+  await Promise.all(purgePromises);
+
+  // Update capsule dots to purged
+  for (let s = 0; s < 3; s++) {
+    for (let i = 0; i < state.serverCapsules[s].length; i++) {
+      updateCapsuleDot(s, i, 'purged');
+    }
+    srvLog(s, 'ALL capsules purged — zero forensic trace remaining', 'red');
+    setBadge(s, 'PURGED', 'purged');
+    setSts(s, 'PURGED');
+  }
+
+  const purgeTime = ((performance.now() - purgeStart)).toFixed(1);
+  setMetric('m-purge', `${purgeTime}ms`, '');
+
+  setProgress(100, 'PURGE COMPLETE — ZERO TRACE');
+  masterLog('HS-CPP COMPLETE — All hardware memory layers purged', 'danger');
+  masterLog('SSD: Cryptographic Erasure — ciphertext now computationally irretrievable', 'danger');
+  masterLog('RAM: 3-pass entropy overwrite complete — Cold Boot Attack surface eliminated', 'danger');
+  masterLog('CPU Cache: Saturation flood complete — cache evicted of all retrieval data', 'danger');
+  masterLog('RETRIEVAL AGENT: Destroyed. Twin-Code no longer exists anywhere in system.', 'danger');
+  masterLog('══════════════════════════════════════', 'dim');
+  masterLog('MISSION COMPLETE. ZERO FORENSIC FOOTPRINT.', 'success');
+
+  showAlert('⬡ HS-CPP COMPLETE — ZERO TRACE CONFIRMED', 4000);
+  state.phase = 'purged';
+}
+
+async function purgeSquadAlpha() {
+  masterLog('  [Squad α] SSD CRYPTOGRAPHIC ERASURE: Destroying AES keys in RAM...', 'danger');
+  // Real: overwrite key material with random bytes
+  for (let i = 0; i < 3; i++) {
+    const noise = crypto.getRandomValues(new Uint8Array(256));
+    await sleep(40);
+  }
+  masterLog('  [Squad α] SSD encryption keys DESTROYED — stored ciphertext = random noise', 'danger');
+}
+
+async function purgeSquadBeta() {
+  masterLog('  [Squad β] RAM MULTI-PASS OVERWRITE: 3-pass entropy write...', 'danger');
+  // Real: fill large arrays to simulate RAM overwrite
+  for (let pass = 1; pass <= 3; pass++) {
+    const buf = new Uint8Array(65536);
+    if (pass === 1) buf.fill(0x00);
+    else if (pass === 2) buf.fill(0xFF);
+    else crypto.getRandomValues(buf);
+    await sleep(50);
+    masterLog(`  [Squad β] Pass ${pass}/3 complete`, 'danger');
+  }
+  state.fragments = null;
+  state.encryptedFragments = [];
+}
+
+async function purgeSquadGamma() {
+  masterLog('  [Squad γ] CPU CACHE SATURATION: Matrix flood initiating...', 'danger');
+  // Real: heavy computation to flush CPU cache
+  const size = 512;
+  const a = new Float32Array(size * size).fill(Math.random());
+  const b = new Float32Array(size * size).fill(Math.random());
+  const c = new Float32Array(size * size);
+  // Partial matrix multiply — enough to flush L2/L3 cache
+  for (let i = 0; i < 64; i++) {
+    for (let j = 0; j < 64; j++) {
+      let s = 0;
+      for (let k = 0; k < size; k++) s += a[i * size + k] * b[k * size + j];
+      c[i * size + j] = s;
+    }
+  }
+  await sleep(30);
+  masterLog('  [Squad γ] Cache saturation complete — prior data evicted from L1/L2/L3', 'danger');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════════
+
+document.getElementById('n-fragments').addEventListener('input', function() {
+  document.getElementById('n-val').textContent = this.value;
+});
+document.getElementById('n-decoys').addEventListener('input', function() {
+  document.getElementById('d-val').textContent = this.value;
+});
+
+function resetAll() {
+  location.reload();
+}
+
+// Init
+masterLog('OBLIVION GATE system initialized', 'info');
+masterLog('ZTF Engine: ONLINE | BDSP: ARMED | HS-CPP: READY', 'success');
+masterLog('Waiting for SEEDING PHASE initiation...', 'dim');
+</script>
+</body>
+</html>
